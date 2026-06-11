@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import heroImg from '@/assets/hero-ai-medical.jpg';
 import auroraImg from '@/assets/aurora-bg.jpg';
+import ShapeBlur from '@/components/features/ShapeBlur';
 
 const FEATURES = [
   {
@@ -189,10 +190,10 @@ export default function Landing() {
             <a href="#faq" className="hover:text-blue-600 transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/auth?mode=login" className="hidden sm:block text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+            <Link to="/login" className="hidden sm:block text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
               Sign In
             </Link>
-            <Link to="/auth?mode=signup" className="btn-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl">
+            <Link to="/signup" className="btn-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl">
               Get Started Free
             </Link>
           </div>
@@ -231,7 +232,7 @@ export default function Landing() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link to="/auth?mode=signup" className="btn-gradient text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/25">
+              <Link to="/signup" className="btn-gradient text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/25">
                 Start for Free
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -279,7 +280,7 @@ export default function Landing() {
                 <div className="flex gap-2 justify-end">
                   <div className="bg-blue-600 rounded-2xl rounded-tr-sm px-3 py-2 text-xs text-white max-w-[80%]">{demoMessage}</div>
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex-shrink-0 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="You" className="w-full h-full object-cover" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-xs font-bold">Y</div>
                   </div>
                 </div>
               )}
@@ -324,8 +325,20 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section id="features" className="relative overflow-hidden py-24 bg-gray-50">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-emerald-50" />
+        <div className="absolute inset-x-0 top-0 h-full opacity-20 mix-blend-multiply pointer-events-none">
+          <ShapeBlur
+            variation={0}
+            pixelRatioProp={typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1}
+            shapeSize={0.72}
+            roundness={0.46}
+            borderSize={0.045}
+            circleSize={0.45}
+            circleEdge={0.85}
+          />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium mb-4">
               <Zap className="w-3.5 h-3.5" />
@@ -343,7 +356,7 @@ export default function Landing() {
             {FEATURES.map((feature, i) => {
               const Icon = feature.icon;
               return (
-                <div key={i} className="group bg-white rounded-2xl p-6 border border-gray-200 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 hover:-translate-y-1">
+                <div key={i} className="group bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 hover:-translate-y-1">
                   <div className={`w-12 h-12 rounded-2xl ${feature.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                     <div className={`w-6 h-6 bg-gradient-to-br ${feature.color} rounded-lg flex items-center justify-center`}>
                       <Icon className="w-3.5 h-3.5 text-white" />
@@ -495,7 +508,7 @@ export default function Landing() {
           </div>
           <h2 className="font-display text-4xl font-bold text-white mb-4">Start Understanding Your Health Today</h2>
           <p className="text-blue-200 text-lg mb-8">Join thousands of users who use MediAI to better understand their health. Free to start, no credit card required.</p>
-          <Link to="/auth?mode=signup" className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors shadow-xl">
+          <Link to="/signup" className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors shadow-xl">
             Get Started Free
             <ChevronRight className="w-5 h-5" />
           </Link>

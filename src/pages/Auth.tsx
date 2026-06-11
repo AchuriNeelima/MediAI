@@ -1,7 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Heart, Eye, EyeOff, ArrowLeft, Shield, Check, AlertCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Activity,
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  HeartPulse,
+  Lock,
+  LogIn,
+  Mail,
+  Shield,
+  User,
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores';
+import heroImg from '@/assets/hero-ai-medical.jpg';
+
+type AuthMode = 'login' | 'signup';
+
+interface AuthProps {
+  defaultMode?: AuthMode;
+}
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -11,30 +32,30 @@ function PasswordStrength({ password }: { password: string }) {
     { label: 'Contains symbol', pass: /[^A-Za-z0-9]/.test(password) },
   ];
   const score = checks.filter(c => c.pass).length;
-  const colors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'];
+  const colors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-emerald-500'];
   const labels = ['Weak', 'Fair', 'Good', 'Strong'];
 
   if (!password) return null;
 
   return (
-    <div className="mt-2">
+    <div className="mt-3">
       <div className="flex gap-1 mb-2">
         {[0, 1, 2, 3].map(i => (
-          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < score ? colors[score - 1] : 'bg-gray-200'}`} />
+          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < score ? colors[score - 1] : 'bg-slate-200'}`} />
         ))}
       </div>
       {score > 0 && (
-        <p className={`text-xs font-medium ${score <= 1 ? 'text-red-500' : score <= 2 ? 'text-yellow-600' : score <= 3 ? 'text-yellow-500' : 'text-green-600'}`}>
+        <p className={`text-xs font-semibold ${score <= 1 ? 'text-red-500' : score <= 2 ? 'text-amber-600' : score <= 3 ? 'text-lime-600' : 'text-emerald-600'}`}>
           {labels[score - 1]} password
         </p>
       )}
-      <div className="mt-2 space-y-1">
+      <div className="mt-2 grid gap-1 sm:grid-cols-2">
         {checks.map((c, i) => (
           <div key={i} className="flex items-center gap-1.5">
-            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${c.pass ? 'bg-green-100' : 'bg-gray-100'}`}>
-              <Check className={`w-2 h-2 ${c.pass ? 'text-green-600' : 'text-gray-300'}`} />
+            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${c.pass ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+              <Check className={`w-2 h-2 ${c.pass ? 'text-emerald-600' : 'text-slate-300'}`} />
             </div>
-            <span className={`text-xs ${c.pass ? 'text-green-600' : 'text-gray-400'}`}>{c.label}</span>
+            <span className={`text-xs ${c.pass ? 'text-emerald-700' : 'text-slate-400'}`}>{c.label}</span>
           </div>
         ))}
       </div>
@@ -42,12 +63,18 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-export default function Auth() {
+export default function Auth({ defaultMode = 'login' }: AuthProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get('mode') || 'login';
-  const isLogin = mode === 'login';
 
+  const mode = useMemo<AuthMode>(() => {
+    if (location.pathname === '/signup') return 'signup';
+    if (location.pathname === '/login') return 'login';
+    return searchParams.get('mode') === 'signup' ? 'signup' : defaultMode;
+  }, [defaultMode, location.pathname, searchParams]);
+
+  const isLogin = mode === 'login';
   const { login, signup, isAuthenticated } = useAuthStore();
 
   const [name, setName] = useState('');
@@ -59,16 +86,33 @@ export default function Auth() {
   const [agree, setAgree] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard');
+    if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google sign-in is not available right now.');
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!email || !password) { setError('Please fill in all fields.'); return; }
-    if (!isLogin && !name) { setError('Please enter your name.'); return; }
-    if (!isLogin && !agree) { setError('Please accept the terms to continue.'); return; }
+    if (!isLogin && !name.trim()) { setError('Please enter your name.'); return; }
+    if (!isLogin && !agree) { setError('Please accept the medical disclaimer to continue.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
 
     setLoading(true);
@@ -76,138 +120,213 @@ export default function Auth() {
       if (isLogin) {
         await login(email, password);
       } else {
-        await signup(name, email, password);
+        await signup(name.trim(), email, password);
       }
-      navigate('/dashboard');
-    } catch {
-      setError('Something went wrong. Please try again.');
+      navigate('/dashboard', { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-indigo-600/10 blur-3xl translate-x-1/2 translate-y-1/2" />
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden overflow-hidden bg-slate-900 lg:block">
+          <img src={heroImg} alt="Medical AI workspace" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-blue-950/70 to-emerald-950/65" />
 
-      <Link to="/" className="absolute top-6 left-6 flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm">
-        <ArrowLeft className="w-4 h-4" />
-        Back to home
-      </Link>
-
-      <div className="w-full max-w-md animate-slide-up">
-        <div className="glass-card rounded-3xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
-              <Heart className="w-7 h-7 text-white animate-heartbeat" />
-            </div>
-            <h1 className="font-display text-2xl font-bold text-white mb-1">
-              {isLogin ? 'Welcome back' : 'Create your account'}
-            </h1>
-            <p className="text-white/50 text-sm">
-              {isLogin ? 'Sign in to your MediAI account' : 'Start your health intelligence journey'}
-            </p>
-          </div>
-
-          <div className="flex bg-white/5 rounded-xl p-1 mb-6 border border-white/10">
-            <Link to="/auth?mode=login" className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all ${isLogin ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}>
-              Sign In
+          <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
+            <Link to="/landing" className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-white/80 transition-colors hover:text-white">
+              <ArrowLeft className="h-4 w-4" />
+              Home
             </Link>
-            <Link to="/auth?mode=signup" className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all ${!isLogin ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}>
-              Sign Up
-            </Link>
-          </div>
 
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/15 border border-red-500/30 mb-4">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-1.5">Full Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Alex Johnson"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
-                />
+            <div className="max-w-xl">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/20">
+                <HeartPulse className="h-7 w-7 text-emerald-300" />
               </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
-              />
+              <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200">MediAI Assistant</p>
+              <h1 className="font-display text-5xl font-black leading-tight text-white">
+                Secure access to your medical AI dashboard
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-blue-100">
+                Continue to your protected workspace for AI chat, report analysis, medical image review, and medication education.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-11 text-white placeholder:text-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {!isLogin && <PasswordStrength password={password} />}
-            </div>
-
-            {!isLogin && (
-              <label className="flex items-start gap-3 cursor-pointer">
-                <div onClick={() => setAgree(!agree)} className={`w-5 h-5 rounded flex items-center justify-center mt-0.5 flex-shrink-0 border transition-all ${agree ? 'bg-blue-600 border-blue-600' : 'border-white/20 bg-white/5'}`}>
-                  {agree && <Check className="w-3 h-3 text-white" />}
+            <div className="grid max-w-xl gap-3 sm:grid-cols-3">
+              {[
+                { icon: Shield, label: 'Privacy-first' },
+                { icon: Activity, label: 'Clinical context' },
+                { icon: Lock, label: 'Protected tools' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                  <Icon className="mb-3 h-5 w-5 text-emerald-300" />
+                  <p className="text-sm font-semibold text-white">{label}</p>
                 </div>
-                <span className="text-xs text-white/50 leading-relaxed">
-                  I understand that MediAI provides educational information only and is not a substitute for professional medical advice. I agree to the Terms of Service and Privacy Policy.
-                </span>
-              </label>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-gradient text-white font-bold py-3 rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
-                </>
-              ) : (
-                isLogin ? 'Sign In' : 'Create Account'
-              )}
-            </button>
-          </form>
-
-          {isLogin && (
-            <button className="w-full text-center text-sm text-blue-400 hover:text-blue-300 mt-3 transition-colors">
-              Forgot your password?
-            </button>
-          )}
-
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mt-6">
-            <Shield className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-300/80">
-              MediAI is an educational tool only. It does not provide medical diagnoses, prescriptions, or treatment recommendations.
-            </p>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
+
+        <main className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
+          <div className="w-full max-w-md">
+            <div className="mb-7 flex items-center justify-between">
+              <Link to="/landing" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-blue-700 lg:hidden">
+                <ArrowLeft className="h-4 w-4" />
+                Home
+              </Link>
+              <div className="ml-auto flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+                  <HeartPulse className="h-5 w-5 text-white" />
+                </div>
+                <span className="font-display text-lg font-bold text-slate-900">MediAI</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/70 sm:p-7">
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-blue-700">{isLogin ? 'Login' : 'Sign Up'}</p>
+                <h2 className="mt-1 font-display text-2xl font-bold text-slate-950">
+                  {isLogin ? 'Welcome back' : 'Create your account'}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  {isLogin
+                    ? 'Sign in to continue to the Medical AI Assistant dashboard.'
+                    : 'Create a secure account to start using your Medical AI Assistant dashboard.'}
+                </p>
+              </div>
+
+              <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+                <Link to="/login" className={`rounded-lg px-3 py-2 text-center text-sm font-bold transition-all ${isLogin ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+                  Login
+                </Link>
+                <Link to="/signup" className={`rounded-lg px-3 py-2 text-center text-sm font-bold transition-all ${!isLogin ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+                  Sign Up
+                </Link>
+              </div>
+
+              {error && (
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLogin && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-semibold text-slate-700">Full name</span>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Alex Johnson"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-10 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                      />
+                    </div>
+                  </label>
+                )}
+
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Email address</span>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-10 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Password</span>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-10 py-3 pr-12 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:text-slate-700"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {!isLogin && <PasswordStrength password={password} />}
+                </label>
+
+                {!isLogin && (
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <input
+                      type="checkbox"
+                      checked={agree}
+                      onChange={e => setAgree(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-amber-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-xs leading-5 text-amber-800">
+                      I understand MediAI provides educational information only and does not replace professional medical advice.
+                    </span>
+                  </label>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      {isLogin ? 'Signing in...' : 'Creating account...'}
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4" />
+                      {isLogin ? 'Login' : 'Create Account'}
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Or</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <LogIn className="h-4 w-4 text-blue-600" />
+                Continue with Google
+              </button>
+
+              <p className="mt-6 text-center text-sm text-slate-500">
+                {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+                <Link to={isLogin ? '/signup' : '/login'} className="font-bold text-blue-700 hover:text-blue-800">
+                  {isLogin ? 'Sign up' : 'Login'}
+                </Link>
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

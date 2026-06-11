@@ -1,4 +1,6 @@
-import { Bell, Moon, Sun, Search, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Moon, Sun, Search, Shield, LogOut } from 'lucide-react';
+import UserAvatar from '@/components/features/UserAvatar';
 import { useUIStore, useAuthStore } from '@/stores';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +11,13 @@ interface Props {
 
 export default function Header({ title, subtitle }: Props) {
   const { darkMode, toggleDarkMode } = useUIStore();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className={cn(
@@ -54,6 +62,21 @@ export default function Header({ title, subtitle }: Props) {
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
+        {user && (
+          <button
+            onClick={() => { void handleLogout(); }}
+            className={cn(
+              'h-8 px-3 rounded-lg flex items-center gap-2 transition-colors text-xs font-semibold whitespace-nowrap',
+              darkMode ? 'bg-gray-800 text-red-400 hover:bg-gray-700' : 'bg-gray-100 text-red-600 hover:bg-red-50'
+            )}
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign out</span>
+          </button>
+        )}
+
         <button className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center relative transition-colors',
           darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -63,10 +86,12 @@ export default function Header({ title, subtitle }: Props) {
         </button>
 
         {user && (
-          <img
-            src={user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'}
-            alt={user.name}
-            className="w-8 h-8 rounded-lg object-cover ring-2 ring-blue-500/30 cursor-pointer hover:ring-blue-500 transition-all"
+          <UserAvatar
+            name={user.name}
+            src={user.avatar}
+            className="w-8 h-8 ring-2 ring-blue-500/30 cursor-pointer hover:ring-blue-500 transition-all rounded-lg"
+            imageClassName="object-cover"
+            fallbackClassName="text-[10px]"
           />
         )}
       </div>

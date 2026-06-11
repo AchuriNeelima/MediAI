@@ -5,7 +5,6 @@ export const MOCK_USER: User = {
   id: 'usr_1',
   name: 'Alex Johnson',
   email: 'alex.johnson@example.com',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
   joinedAt: '2024-01-15',
   plan: 'pro',
 };
@@ -214,6 +213,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   notifications: true,
   emailUpdates: false,
   emergencyAlerts: true,
+  voiceMuted: false,
   language: 'en',
   fontSize: 'medium',
 };

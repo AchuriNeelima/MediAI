@@ -98,7 +98,7 @@ export default function MedicineInfo() {
                 </div>
               ) : (
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex-shrink-0 overflow-hidden">
-                  <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="You" className="w-full h-full object-cover" />
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-600 to-green-600 text-white text-xs font-bold">Y</div>
                 </div>
               )}
               <div className={cn('max-w-[80%] rounded-2xl px-4 py-3', entry.role === 'user' ? 'bg-gradient-to-br from-teal-600 to-green-600 text-white text-sm rounded-tr-sm' : 'bg-white border border-gray-200 shadow-sm rounded-tl-sm')}>

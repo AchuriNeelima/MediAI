@@ -7,7 +7,7 @@ const EMERGENCY_CONFIGS: Record<string, { type: EmergencyAlert['type']; actions:
   'chest pain': {
     type: 'chest_pain',
     actions: [
-      'Call 911 immediately or have someone drive you to the ER',
+      'Call 108 immediately or have someone drive you to the ER',
       'Chew an aspirin (325mg) if not allergic and no contraindications',
       'Sit or lie down in a comfortable position',
       'Loosen tight clothing',
@@ -17,7 +17,7 @@ const EMERGENCY_CONFIGS: Record<string, { type: EmergencyAlert['type']; actions:
   'heart attack': {
     type: 'heart_attack',
     actions: [
-      'Call 911 immediately',
+      'Call 108 immediately',
       'Chew aspirin if available and not contraindicated',
       'Stay calm and still — do not exert yourself',
       'Unlock your door so emergency services can enter',
@@ -27,7 +27,7 @@ const EMERGENCY_CONFIGS: Record<string, { type: EmergencyAlert['type']; actions:
   "can't breathe": {
     type: 'breathing',
     actions: [
-      'Call 911 immediately',
+      'Call 108 immediately',
       'Sit upright to make breathing easier',
       'Use prescribed inhaler if available (asthma)',
       'Remove tight clothing around chest and neck',
@@ -37,18 +37,18 @@ const EMERGENCY_CONFIGS: Record<string, { type: EmergencyAlert['type']; actions:
   'stroke': {
     type: 'stroke',
     actions: [
-      'Call 911 immediately — time is critical for stroke treatment',
+      'Call 108 immediately — time is critical for stroke treatment',
       'Note the exact time symptoms started',
       'Do not give food, water, or medications',
       'Keep person calm and lying down',
-      'Remember FAST: Face drooping, Arm weakness, Speech difficulty, Time to call 911',
+      'Remember FAST: Face drooping, Arm weakness, Speech difficulty, Time to call 108',
     ],
   },
   'suicidal': {
     type: 'mental_health',
     actions: [
-      'Call or text 988 (Suicide & Crisis Lifeline) immediately',
-      'If in immediate danger, call 911',
+      'Call iCall at 9152987821 immediately',
+      'If in immediate danger, call 112',
       'Stay with the person — do not leave them alone',
       'Remove access to means of self-harm if safe to do so',
       'Listen without judgment and express care',
@@ -63,7 +63,7 @@ function detectEmergency(text: string): EmergencyAlert | null {
       const config = EMERGENCY_CONFIGS[keyword] || {
         type: 'general' as const,
         actions: [
-          'Call 911 if this is a life-threatening emergency',
+          'Call 108 if this is a life-threatening emergency',
           'Contact your nearest emergency room',
           'Call your doctor or urgent care immediately',
           'Do not delay seeking professional medical help',

@@ -6,6 +6,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuthStore, useChatStore, useUIStore } from '@/stores';
 import { truncate } from '@/lib/utils';
+import UserAvatar from '@/components/features/UserAvatar';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -66,18 +67,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto pt-3 pb-2">
-        {sidebarOpen && (
-          <div className="px-3 mb-3">
-            <Link
-              to="/chat"
-              onClick={() => setActiveConversation(null)}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              New Chat
-            </Link>
-          </div>
-        )}
+        {/* New Chat button removed per request */}
 
         <div className="px-2 space-y-0.5">
           {NAV_ITEMS.map(item => {
@@ -125,29 +115,7 @@ export default function Sidebar() {
           </div>
         )}
 
-        {sidebarOpen && recentConvs.length > 0 && (
-          <div className="mt-4 px-3">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2 px-1">
-              Recent Chats
-            </p>
-            {recentConvs.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => setActiveConversation(conv.id)}
-                className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors group"
-              >
-                <MessageSquare className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate flex-1">{truncate(conv.title, 24)}</span>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(conv.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Star className={cn('w-3 h-3', conv.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-gray-400')} />
-                </button>
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Recent chats removed per request */}
       </nav>
 
       {/* User profile */}
@@ -164,10 +132,12 @@ export default function Sidebar() {
               !sidebarOpen && 'justify-center'
             )}
           >
-            <img
-              src={user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'}
-              alt={user.name}
-              className="w-7 h-7 rounded-full object-cover ring-2 ring-blue-500/30 flex-shrink-0"
+            <UserAvatar
+              name={user.name}
+              src={user.avatar}
+              className="w-7 h-7 ring-2 ring-blue-500/30 flex-shrink-0"
+              imageClassName="object-cover"
+              fallbackClassName="text-[10px]"
             />
             {sidebarOpen && (
               <div className="min-w-0 flex-1">

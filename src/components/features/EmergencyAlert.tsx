@@ -55,11 +55,18 @@ export default function EmergencyAlert({ alert, onDismiss }: Props) {
           </div>
 
           <a
-            href="tel:911"
-            className="flex items-center justify-center gap-2 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg mb-4 transition-colors"
+            href="tel:108"
+            className="flex items-center justify-center gap-2 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg mb-3 transition-colors animate-pulse"
           >
             <Phone className="w-5 h-5" />
-            Call 911 Now
+            📞 Call 108 Now — Ambulance
+          </a>
+          <a
+            href="tel:112"
+            className="flex items-center justify-center gap-2 w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 px-4 rounded-lg mb-4 transition-colors"
+          >
+            <Phone className="w-4 h-4" />
+            Call 112 — Police / Fire
           </a>
 
           <div>

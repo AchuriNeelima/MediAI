@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Bell, Shield, Moon, Sun, LogOut, Save, Camera, Mail, Calendar, Award, Edit2, Check, Trash2 } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, LogOut, Save, Camera, Mail, Calendar, Award, Edit2, Check, Trash2, VolumeX } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { useAuthStore, useUIStore } from '@/stores';
+import UserAvatar from '@/components/features/UserAvatar';
+import { upsertProfile } from '@/lib/supabase-service';
 import { cn } from '@/lib/utils';
+
+const AVATAR_GALLERY = [
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Orchid',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=River',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Nova',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Atlas',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Ember',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Echo',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Sol',
+  'https://api.dicebear.com/7.x/avataaars-neutral/svg?seed=Halo',
+];
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -18,9 +31,46 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('profile');
   const [editName, setEditName] = useState(user?.name || '');
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
-  const handleLogout = () => { logout(); navigate('/'); };
+  const persistUser = async (nextUser: NonNullable<typeof user>) => {
+    useAuthStore.setState({ user: nextUser });
+    await upsertProfile(nextUser);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    const nextUser = { ...user, name: editName.trim() || user.name };
+    await persistUser(nextUser);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleAvatarSelect = async (avatar: string) => {
+    if (!user) return;
+    await persistUser({ ...user, avatar });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleAvatarUpload = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        await handleAvatarSelect(result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const handleLogout = async () => { await logout(); navigate('/login', { replace: true }); };
 
   if (!user) return null;
 
@@ -33,14 +83,17 @@ export default function Profile() {
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <img
-                  src={user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}
-                  alt={user.name}
-                  className="w-20 h-20 rounded-2xl object-cover ring-4 ring-blue-500/20"
+                <UserAvatar
+                  name={user.name}
+                  src={user.avatar}
+                  className="w-20 h-20 rounded-2xl ring-4 ring-blue-500/20"
+                  imageClassName="object-cover"
+                  fallbackClassName="text-xl"
                 />
-                <button className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleAvatarUpload} className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors" title="Choose photo from gallery">
                   <Camera className="w-3.5 h-3.5" />
                 </button>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </div>
               <div className="flex-1">
                 <h2 className="font-display text-xl font-bold text-gray-900">{user.name}</h2>
@@ -56,7 +109,7 @@ export default function Profile() {
                   </span>
                 </div>
               </div>
-              <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 border border-red-200 transition-colors">
+              <button onClick={() => { void handleLogout(); }} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 border border-red-200 transition-colors">
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </button>
@@ -128,6 +181,21 @@ export default function Profile() {
                   <div className={cn('absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all', darkMode ? 'left-6' : 'left-1')} />
                 </button>
               </div>
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <VolumeX className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Voice Responses</p>
+                    <p className="text-xs text-gray-500">Keep AI replies muted by default</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updatePreferences({ voiceMuted: !preferences.voiceMuted }, user.id)}
+                  className={cn('w-11 h-6 rounded-full transition-all relative', preferences.voiceMuted ? 'bg-blue-600' : 'bg-gray-200')}
+                >
+                  <div className={cn('absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all', preferences.voiceMuted ? 'left-6' : 'left-1')} />
+                </button>
+              </div>
               {[
                 { key: 'notifications', label: 'Push Notifications', desc: 'Analysis complete alerts', icon: Bell },
                 { key: 'emailUpdates', label: 'Email Updates', desc: 'Monthly health tips newsletter', icon: Mail },
@@ -142,7 +210,7 @@ export default function Profile() {
                     </div>
                   </div>
                   <button
-                    onClick={() => updatePreferences({ [key]: !preferences[key as keyof typeof preferences] })}
+                    onClick={() => updatePreferences({ [key]: !preferences[key as keyof typeof preferences] }, user.id)}
                     className={cn('w-11 h-6 rounded-full transition-all relative', preferences[key as keyof typeof preferences] ? 'bg-blue-600' : 'bg-gray-200')}
                   >
                     <div className={cn('absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all', preferences[key as keyof typeof preferences] ? 'left-6' : 'left-1')} />
@@ -153,11 +221,39 @@ export default function Profile() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Interface Font Size</label>
                 <div className="flex gap-2">
                   {(['small', 'medium', 'large'] as const).map(size => (
-                    <button key={size} onClick={() => updatePreferences({ fontSize: size })} className={cn('flex-1 py-2 rounded-xl text-sm font-medium border transition-all capitalize', preferences.fontSize === size ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300')}>
+                    <button key={size} onClick={() => updatePreferences({ fontSize: size }, user.id)} className={cn('flex-1 py-2 rounded-xl text-sm font-medium border transition-all capitalize', preferences.fontSize === size ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300')}>
                       {size}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900">Choose a profile photo</h3>
+                    <p className="text-xs text-gray-500">Pick from the gallery or upload your own picture.</p>
+                  </div>
+                  <button onClick={handleAvatarUpload} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                    Upload from gallery
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+                  {AVATAR_GALLERY.map((avatar) => (
+                    <button
+                      key={avatar}
+                      onClick={() => { void handleAvatarSelect(avatar); }}
+                      className={cn(
+                        'rounded-2xl p-1 border transition-all hover:scale-105',
+                        user.avatar === avatar ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'
+                      )}
+                      title="Use this avatar"
+                    >
+                      <img src={avatar} alt="Avatar option" className="w-full h-full rounded-xl object-cover bg-gray-50" />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">If you do not choose one, MediAI shows your initials instead of a stock photo.</p>
               </div>
             </div>
           )}

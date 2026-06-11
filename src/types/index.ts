@@ -109,6 +109,7 @@ export interface UserPreferences {
   notifications: boolean;
   emailUpdates: boolean;
   emergencyAlerts: boolean;
+  voiceMuted: boolean;
   language: string;
   fontSize: 'small' | 'medium' | 'large';
 }
